@@ -431,7 +431,7 @@ def skill_description() -> str:
         value = m.group(1).strip() if m else ""
         # The scalar is single-quoted in SKILL.md: unquoted, the ": " inside the text ("...
         # requests: cut, trim ...") is a new mapping key to a strict YAML parser and the whole
-        # frontmatter fails to load (GitHub's renderer reported it; npx skills add and Claude
+        # frontmatter fails to load (GitHub's renderer reported it; bunx skills add and Claude
         # Code's loader parse it strictly). '' is the only escape inside a YAML single-quoted scalar.
         if len(value) >= 2 and value[0] == value[-1] == "'":
             value = value[1:-1].replace("''", "'")
@@ -645,7 +645,7 @@ def doctor() -> Dict[str, Any]:
 
     `version` is this INSTALLED COPY's own version (read from its local package.json, same value
     `contract --json`'s `skill.version` reports) -- never fetched from the network or compared
-    against the latest published release. A copy installed with `npx ffmpeg-skill` is not updated
+    against the latest published release. A copy installed with `bunx ffmpeg-skill` is not updated
     automatically; re-run the installer to refresh it, then `doctor` again to confirm the version
     changed. This exists so a stale installed copy is visible locally, not to check for updates.
 
@@ -1007,7 +1007,7 @@ def build(detect: bool = True) -> Dict[str, Any]:
             },
             "not_provided": ["AI reasoning", "decisions", "production plans", "project IR", "approvals", "network access", "transcription engine"],
         },
-        "requirements": {"python": ">=3.9 (standard library only)", "ffmpeg": ">=5.0", "ffprobe": ">=5.0", "node": ">=16 (npx installer only)"},
+        "requirements": {"python": ">=3.9 (standard library only)", "ffmpeg": ">=5.0", "ffprobe": ">=5.0", "node": ">=16 (bunx installer only)"},
         "execution": {
             "shell": False,
             "arbitrary_executables": False,
@@ -1061,7 +1061,7 @@ def main() -> int:
         if args.json:
             print(json.dumps(d, indent=2, sort_keys=True))
         else:
-            print(f"ffmpeg-skill {d['version']} (this installed copy; re-run `npx ffmpeg-skill` to refresh it -- copies are not updated automatically)")
+            print(f"ffmpeg-skill {d['version']} (this installed copy; re-run `bunx ffmpeg-skill` to refresh it -- copies are not updated automatically)")
             print(f"python {d['python']}; ffmpeg {d['ffmpeg'] or 'MISSING'}; ffprobe {d['ffprobe'] or 'MISSING'}")
             print(f"available: {', '.join(d['available'])}")
             print(f"missing required: {', '.join(d['missing']) or 'none'}")

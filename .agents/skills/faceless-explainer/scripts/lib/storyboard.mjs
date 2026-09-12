@@ -2,7 +2,7 @@
 //
 // Faithful plain-JS port of @hyperframes/core/storyboard
 // (packages/core/src/storyboard/parseStoryboard.ts). Vendored because skills
-// ship standalone: installed via `npx skills add`, a skill's scripts can't reach
+// ship standalone: installed via `bunx skills add`, a skill's scripts can't reach
 // the monorepo's core package, and the core export points at .ts source that
 // `node` (which runs these scripts) can't load. CANONICAL contract = the core
 // parser + skills/hyperframes-core/references/storyboard-format.md; keep this in

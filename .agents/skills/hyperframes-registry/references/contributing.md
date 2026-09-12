@@ -115,7 +115,7 @@ hyperframes render -o preview.mp4
 hyperframes snapshot --at "1.0,3.0,5.0,7.0"
 
 # Publish to hyperframes.dev for review
-npx hyperframes publish
+bunx hyperframes publish
 ```
 
 **Catalog preview image** — For the default PNG preview, save your snapshot at `docs/images/catalog/{kind}/{name}.png` in the repository checkout (`{kind}` is `blocks` or `components`). After upload, the catalog serves it from `https://static.heygen.ai/hyperframes-oss/docs/images/catalog/{kind}/{name}.png`. If `registry-item.json` declares `preview`, the card uses its `poster` URL; a `preview` without `poster` has no image fallback.
@@ -134,20 +134,20 @@ npx hyperframes publish
 git checkout -b feat/registry-{name}
 
 # 2. Format HTML
-npx oxfmt registry/{kind}/{name}/*.html
+bunx oxfmt registry/{kind}/{name}/*.html
 
 # 3. Regenerate registry/registry.json from the item directories.
 #    Do not hand-edit it: an entry added by hand survives until the next
 #    regeneration and then vanishes, and one left behind for a directory that
 #    no longer exists is worse, because `hyperframes add <name>` resolves the
 #    name and then fails on missing files.
-npx tsx scripts/generate-registry-items.ts
+bunx tsx scripts/generate-registry-items.ts
 
 # 4. Generate catalog docs page
-npx tsx scripts/generate-catalog-pages.ts
+bunx tsx scripts/generate-catalog-pages.ts
 
 # 5. Publish to hyperframes.dev so reviewers can preview
-npx hyperframes publish
+bunx hyperframes publish
 
 # 6. Stage everything
 git add registry/{kind}/{name}/ registry/registry.json docs/catalog/
@@ -166,9 +166,9 @@ gh pr create --title "feat(registry): {name}" --body "preview: {hyperframes.dev-
 
 - [ ] `hyperframes lint` → 0 errors
 - [ ] `hyperframes check` → 0 console errors
-- [ ] `npx oxfmt --check` passes
+- [ ] `bunx oxfmt --check` passes
 - [ ] `registry/registry.json` updated with new entry
 - [ ] `scripts/generate-catalog-pages.ts` run (docs page generated)
-- [ ] `npx hyperframes publish` run (claim your project URL)
+- [ ] `bunx hyperframes publish` run (claim your project URL)
 - [ ] Preview MP4 attached to PR (external) or catalog PNG uploaded (internal)
 - [ ] All IDs unique and prefixed

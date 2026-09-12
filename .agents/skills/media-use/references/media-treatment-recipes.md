@@ -305,7 +305,7 @@ When the narrative benefits from explicit recording-device language, install
 the Registry overlay block:
 
 ```bash
-npx hyperframes add camcorder-hud --no-clipboard
+bunx hyperframes add camcorder-hud --no-clipboard
 ```
 
 Insert the printed `data-composition-src` host over the intended media range.
@@ -804,7 +804,7 @@ texture, generic flash, or film-stock emulation.
 Install the Registry overlay block:
 
 ```bash
-npx hyperframes add organic-light-leak-overlay --no-clipboard
+bunx hyperframes add organic-light-leak-overlay --no-clipboard
 ```
 
 Insert the printed `data-composition-src` host at the intended beat and keep
@@ -824,9 +824,9 @@ Extract the exact deterministic source frame first, then remove its background:
 
 ```bash
 ffmpeg -ss <seconds> -i <source-video> -frames:v 1 -y .media/generated/freeze-source.png
-npx hyperframes remove-background .media/generated/freeze-source.png \
+bunx hyperframes remove-background .media/generated/freeze-source.png \
   -o .media/generated/freeze-cutout.png --json
-npx hyperframes add freeze-frame-dressing --no-clipboard
+bunx hyperframes add freeze-frame-dressing --no-clipboard
 ```
 
 Add the transparent result as a direct-root timed media layer and insert the
@@ -876,7 +876,7 @@ authored light/motion layers when they do not obscure required information.
 Install the Registry overlay block:
 
 ```bash
-npx hyperframes add editorial-flash-overlay --no-clipboard
+bunx hyperframes add editorial-flash-overlay --no-clipboard
 ```
 
 Insert the printed `data-composition-src` host so the block's midpoint lands

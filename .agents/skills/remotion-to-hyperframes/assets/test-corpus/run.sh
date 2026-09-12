@@ -132,7 +132,7 @@ run_render_tier() {
 
   echo "    ⏳ render Remotion baseline"
   if ! (cd "$fixture_dir/remotion-src" && \
-        npx --no-install remotion render "$composition_id" out/baseline.mp4 >/dev/null 2>&1); then
+        bunx --no-install remotion render "$composition_id" out/baseline.mp4 >/dev/null 2>&1); then
     echo "    ✗ Remotion render failed"
     write_result "$fixture_name" "fail" stage "remotion-render"
     return 0

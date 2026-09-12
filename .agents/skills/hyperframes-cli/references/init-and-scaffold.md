@@ -1,19 +1,19 @@
-# init, capture, skills
+# init and capture
 
 <!-- registry-items: allow=blank,landscape-4k,portrait-4k,square-4k,product-launch-video,hyperframes-core,media-use -->
 
-Scaffolding commands. Use these instead of creating files by hand — they set up the right file structure, copy media, run transcription, and install AI coding skills.
+Scaffolding commands. Use these instead of creating files by hand — they set up the right file structure, copy media, and run transcription.
 
 ## init
 
 ```bash
-npx hyperframes init my-video                                    # TTY: interactive wizard
-npx hyperframes init my-video --example warm-grain               # pick an example
-npx hyperframes init my-video --example blank --resolution portrait
-npx hyperframes init my-video --video clip.mp4                   # with video file
-npx hyperframes init my-video --audio track.mp3                  # with audio file
-npx hyperframes init my-video --example blank --tailwind         # Tailwind v4 browser runtime
-npx hyperframes init my-video --non-interactive --example blank  # CI/agents — flag-only
+bunx hyperframes init my-video                                    # TTY: interactive wizard
+bunx hyperframes init my-video --example warm-grain               # pick an example
+bunx hyperframes init my-video --example blank --resolution portrait
+bunx hyperframes init my-video --video clip.mp4                   # with video file
+bunx hyperframes init my-video --audio track.mp3                  # with audio file
+bunx hyperframes init my-video --example blank --tailwind         # Tailwind v4 browser runtime
+bunx hyperframes init my-video --non-interactive --example blank  # CI/agents — flag-only
 ```
 
 **Default depends on TTY**: in a terminal, the CLI prompts for example/options. Outside a TTY (CI, agents, piped output) it auto-switches to non-interactive and **requires `--example`** (the CLI errors with a usage example if missing). Pass `--non-interactive` to force flag-only mode even on a TTY.
@@ -35,14 +35,14 @@ When `--audio` or `--video` is supplied, `init` transcribes the file with Whispe
 ## capture
 
 ```bash
-npx hyperframes capture https://stripe.com                  # scaffold from a website
-npx hyperframes capture https://linear.app -o linear-video  # custom output directory
-npx hyperframes capture https://example.com --json          # JSON output for agents
-npx hyperframes capture https://example.com --skip-assets   # skip image/SVG download
-npx hyperframes capture https://example.com --skip-vision   # skip optional AI captions
-npx hyperframes capture https://example.com --max-screenshots 12
-npx hyperframes capture https://example.com --timeout 60000 # page-load timeout in ms
-npx hyperframes capture https://example.com --capture-budget 90000 # post-navigation budget
+bunx hyperframes capture https://stripe.com                  # scaffold from a website
+bunx hyperframes capture https://linear.app -o linear-video  # custom output directory
+bunx hyperframes capture https://example.com --json          # JSON output for agents
+bunx hyperframes capture https://example.com --skip-assets   # skip image/SVG download
+bunx hyperframes capture https://example.com --skip-vision   # skip optional AI captions
+bunx hyperframes capture https://example.com --max-screenshots 12
+bunx hyperframes capture https://example.com --timeout 60000 # page-load timeout in ms
+bunx hyperframes capture https://example.com --capture-budget 90000 # post-navigation budget
 ```
 
 Captures a live URL as an editable HyperFrames project: screenshots become layered scenes, assets are downloaded locally, and the result is a normal project you can `lint` / `preview` / `render`. Use this when the user supplies a URL as the starting point for a video.
@@ -65,10 +65,6 @@ workflow's gate. Exit zero and file existence alone are not semantic success: re
 invocation's JSON `ok: true`, no `BLOCKED.md`, and artifacts usable for that workflow. Run each retry
 into a fresh output directory; never merge or reuse a blocked attempt's partial output.
 
-## skills
+## Project-local skills
 
-```bash
-npx hyperframes skills    # install HyperFrames skills for AI coding tools
-```
-
-One-time setup that adds the HyperFrames skill pack (`hyperframes-core`, `-creative`, `-animation`, `-cli`, `-registry`, `-media`, plus the `product-launch-video` and `hyperframes` orchestrators) to the local AI coding environment so agents follow the framework conventions. Re-run after major HyperFrames upgrades.
+Skills for this workspace already live under `.agents/skills`. Do not use the HyperFrames CLI to copy them into user-level agent directories. To refresh the project-local tree, run `./scripts/update-skills.ps1` from the repo root.

@@ -88,7 +88,7 @@ Surfaced here; full rationale in the linked reference. Do not violate:
 
 Use `hyperframes-cli` for command details
 
-- [ ] `npx hyperframes check` passes (0 findings across lint, runtime, layout, motion, and contrast)
-- [ ] Projects with sub-compositions: `npx hyperframes snapshot --at <midpoints>` and eyeball each frame
-- [ ] `npx hyperframes preview --background` for review (the user can edit anything in Studio's timeline, and the server survives the invoking command)
-- [ ] `npx hyperframes render` only after the user approves
+- [ ] `bunx hyperframes check` passes (0 findings across lint, runtime, layout, motion, and contrast)
+- [ ] Projects with sub-compositions: `bunx hyperframes snapshot --at <midpoints>` and eyeball each frame
+- [ ] `bunx hyperframes preview --background` for review (the user can edit anything in Studio's timeline, and the server survives the invoking command)
+- [ ] `bunx hyperframes render` only after the user approves

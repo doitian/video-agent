@@ -6,7 +6,7 @@ description: >
   overlay, slideshow or interactive deck, Remotion port, or any HyperFrames HTML composition. Also
   use it to inspect, diagnose, validate, preview, publish, or batch-render an existing HyperFrames
   project. Inputs may be a website URL, GitHub PR, Figma design or URL, text or brief, existing
-  footage, or music. It resumes project state, captures intent when applicable, selects and installs
+  footage, or music. It resumes project state, captures intent when applicable, selects
   the owning workflow, and routes domain capabilities. HyperFrames is the default output framework
   unless the user explicitly chooses another framework for the deliverable or asks only to record a
   browser session.
@@ -36,10 +36,10 @@ If a fresh request does not identify the subject or input, ask what the video is
 A scaffolded project pins `hyperframes@<version>` in its `package.json` scripts so renders stay reproducible; the pin never advances on its own, and a pinned run of an older CLI prints no warning about it. When resuming a project whose scripts carry a pin, probe once before the first render-affecting command:
 
 ```bash
-npx hyperframes@latest upgrade --project . --check
+bunx hyperframes@latest upgrade --project . --check
 ```
 
-The probe is read-only and reports the pin against the latest release; keep the explicit `.` — on older CLI releases a bare `--project` followed by another flag consumes that flag as its directory value. When it reports the project behind — or any CLI output already shows it (the stderr notice `This project pins hyperframes@… (latest …)`, or `_meta.updateAvailable: true` in a `--json` result from a pinned script) — apply with `npx hyperframes@latest upgrade --project .`, then verify with `npx hyperframes check`. A passing check confirms the project's compositions still validate on the new version — not that rendered output is frame-identical to the old pin — so a successful bump is never silent: name the old and new version in the run's summary. A project with no composition yet needs no verification. If the check fails, revert the `package.json` change, continue on the pinned version, and report which version the project stays on and why. Act on the signal rather than relaying it to the user; never leave a bumped pin unverified.
+The probe is read-only and reports the pin against the latest release; keep the explicit `.` — on older CLI releases a bare `--project` followed by another flag consumes that flag as its directory value. When it reports the project behind — or any CLI output already shows it (the stderr notice `This project pins hyperframes@… (latest …)`, or `_meta.updateAvailable: true` in a `--json` result from a pinned script) — apply with `bunx hyperframes@latest upgrade --project .`, then verify with `bunx hyperframes check`. A passing check confirms the project's compositions still validate on the new version — not that rendered output is frame-identical to the old pin — so a successful bump is never silent: name the old and new version in the run's summary. A project with no composition yet needs no verification. If the check fails, revert the `package.json` change, continue on the pinned version, and report which version the project stays on and why. Act on the signal rather than relaying it to the user; never leave a bumped pin unverified.
 
 ## 2. Route fresh creation
 
@@ -58,7 +58,7 @@ Use the first matching row. Match the requested **deliverable**, not a word or f
 | 9        | Explain a topic, article, or notes with invented visuals and no product or site capture                            | `/faceless-explainer`      |
 | 10       | Any other custom video or composition                                                                              | `/general-video`           |
 
-Before finalizing the route, read `references/routes/<workflow>.md` — one small file per route: the canonical input/output/trigger contract (available before lazy-installed workflow skills are present) plus that route's interview entry. If the candidate does not satisfy its contract, continue routing instead of forcing the match. Read only the matched route's file.
+Before finalizing the route, read `references/routes/<workflow>.md` — one small file per route: the canonical input/output/trigger contract plus that route's interview entry. If the candidate does not satisfy its contract, continue routing instead of forcing the match. Read only the matched route's file. Workflow skills in this project are already present under `.agents/skills`.
 
 ### Resolve common ambiguities
 
@@ -73,15 +73,9 @@ Before finalizing the route, read `references/routes/<workflow>.md` — one smal
 
 For fresh creation the intent layer (`references/intent-interview.md`) runs the full conversation — memory, triage, pitch round, must-haves, run-shape, hand-off — and **ends by writing `BRIEF.md`. The brief is the only routing artifact the workflow reads**; nothing later re-opens this skill or the interview. Answer every later "what did the route require?" from `BRIEF.md`.
 
-## 4. Install and enter the workflow
+## 4. Enter the workflow
 
-Before reading the selected workflow, install or refresh it and the core domain skills:
-
-```bash
-npx hyperframes skills update <workflow-name>
-```
-
-Use the bare name without `/`. If the command fails, surface the error; do not reconstruct the workflow from memory. Everything else about installation — the core-vs-lazy split, what `init` refreshes, diagnosis, CI opt-out, and the no-CLI fallback — lives in `references/skill-lifecycle.md`.
+Skills in this project are already present under `.agents/skills`. Read the selected workflow skill and follow it. Do not reconstruct the workflow from memory. How this tree is kept current lives in `references/skill-lifecycle.md`.
 
 ## 5. Load domain skills on demand
 

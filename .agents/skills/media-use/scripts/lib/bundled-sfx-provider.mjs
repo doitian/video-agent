@@ -5,7 +5,7 @@ const LIB_DIR =
   process.env.HYPERFRAMES_MEDIA_USE_SFX_DIR ||
   join(import.meta.dirname, "..", "..", "audio", "assets", "sfx");
 
-export const BUNDLED_SFX_RECOVERY_COMMAND = "npx hyperframes skills update media-use";
+export const BUNDLED_SFX_RECOVERY_COMMAND = "./scripts/update-skills.ps1";
 
 export class BundledSfxAssetsError extends Error {
   constructor(health) {

@@ -15,7 +15,6 @@ import { basename, extname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { mergeTokensToWords } from "./lib/parakeet-words.mjs";
 import { track } from "./lib/telemetry.mjs";
-import { resolveNpxInvocation } from "./lib/npx-sync.mjs";
 
 // The DEFAULT local transcription path. Prefers NVIDIA Parakeet-TDT via
 // parakeet-mlx, which beats whisper.cpp on the Open ASR Leaderboard (~6.05% vs
@@ -127,15 +126,15 @@ function runParakeet(runner) {
 function runWhisper() {
   const workDir = mkdtempSync(join(tmpdir(), "media-use-whisper-"));
   try {
-    // On Windows a bare "npx" is npx.cmd, which execFileSync cannot exec
-    // (spawnSync npx ENOENT) — resolveNpxInvocation reroutes it through
-    // node + npx-cli.js (and throws actionably when it can't), same
-    // mechanism as the audio engine's TTS spawns.
-    const resolved = resolveNpxInvocation(
+    execFileSync(
+      "bunx",
       ["hyperframes", "transcribe", inputPath, "--dir", workDir],
-      { stdio: ["ignore", "pipe", "pipe"], timeout: 1_800_000 },
+      {
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 1_800_000,
+        shell: process.platform === "win32",
+      },
     );
-    execFileSync(resolved.cmd, resolved.args, resolved.opts);
     const produced = join(workDir, "transcript.json");
     if (!existsSync(produced)) throw new Error("whisper produced no transcript.json");
     const tmp = `${outPath}.tmp-${process.pid}`;

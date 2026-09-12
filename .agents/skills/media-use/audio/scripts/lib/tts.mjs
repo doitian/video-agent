@@ -41,7 +41,7 @@ export function pickProvider(userProvider) {
       throw new Error(`invalid provider "${userProvider}" (heygen | elevenlabs | kokoro)`);
     if (userProvider === "heygen" && !heygenAvailable())
       throw new Error(
-        "provider=heygen but no HeyGen credentials (set $HEYGEN_API_KEY or run `npx hyperframes auth login`)",
+        "provider=heygen but no HeyGen credentials (set $HEYGEN_API_KEY or run `bunx hyperframes auth login`)",
       );
     if (userProvider === "elevenlabs" && !process.env.ELEVENLABS_API_KEY)
       throw new Error("provider=elevenlabs but $ELEVENLABS_API_KEY is not set");
@@ -279,8 +279,8 @@ export async function synthesizeOne({
   const wavRel = relTo(hyperframesDir, wavAbs);
   const args = ["hyperframes", "tts", writeTmpText(text), "--voice", voiceId, "--output", wavRel];
   if (lang !== "en") args.push("--lang", lang);
-  const r = await spawnP("npx", args, { cwd: hyperframesDir });
-  return synthResult(r, wavAbs, "kokoro (npx hyperframes tts)");
+  const r = await spawnP("bunx", args, { cwd: hyperframesDir });
+  return synthResult(r, wavAbs, "kokoro (bunx hyperframes tts)");
 }
 
 // Shape a spawn result into { ok, words, error }, naming why on failure so the
@@ -352,7 +352,7 @@ export async function transcribeWav({ wavRel, lang = "en", hyperframesDir }) {
   const td = mkdtempSync(join(tmpdir(), "hf-trans-"));
   const args = ["hyperframes", "transcribe", wavRel, "--model", model, "--dir", td];
   if (lang !== "en") args.push("--language", lang);
-  const r = await spawnP("npx", args, { cwd: hyperframesDir });
+  const r = await spawnP("bunx", args, { cwd: hyperframesDir });
   let words = null;
   if (r.status === 0) {
     const src = join(td, "transcript.json");

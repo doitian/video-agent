@@ -89,8 +89,8 @@ Use the CLI as the primary discovery surface. **Search by intent before browsing
 
 ```bash
 # Rank the whole catalog against what the beat should do
-npx hyperframes catalog --query "reveal a headline one line at a time"
-npx hyperframes add caption-clip-wipe
+bunx hyperframes catalog --query "reveal a headline one line at a time"
+bunx hyperframes add caption-clip-wipe
 ```
 
 Search is local and sends nothing. By default it ranks on vocabulary shared with the item's name, title and description, so it only finds items that reuse your words; `--on-device` ranks by meaning instead, after a one-time model download. With `--json` the envelope names which tier answered, so check that rather than assuming a ranking happened.
@@ -102,12 +102,12 @@ Installability is applied after ranking, not before it: a name the vectors carry
 To browse or filter instead of search:
 
 ```bash
-npx hyperframes catalog
-npx hyperframes catalog --type block
-npx hyperframes catalog --type component
-npx hyperframes catalog --type block --tag social
-npx hyperframes catalog --json
-npx hyperframes catalog --human-friendly
+bunx hyperframes catalog
+bunx hyperframes catalog --type block
+bunx hyperframes catalog --type component
+bunx hyperframes catalog --type block --tag social
+bunx hyperframes catalog --json
+bunx hyperframes catalog --human-friendly
 ```
 
 The normal table and `--json` modes only list matches; install a selected name with `hyperframes add <name>`. `--human-friendly` opens an interactive picker and installs the selected item immediately. In CI or agent workflows, prefer `--json` followed by an explicit `add`.
@@ -117,7 +117,7 @@ The normal table and `--json` modes only list matches; install a selected name w
 When the search comes back and nothing in it does the job, say so before you hand-author the move:
 
 ```bash
-npx hyperframes feedback --search-miss "<the query you ran>" --wanted "<the move you needed>" --tier on-device
+bunx hyperframes feedback --search-miss "<the query you ran>" --wanted "<the move you needed>" --tier on-device
 ```
 
 `catalog --query` prints this line for you, pre-filled, and `--json` carries it as `report_gap` — so it is already in hand at the moment you decide nothing fits.

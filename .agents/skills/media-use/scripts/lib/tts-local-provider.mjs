@@ -43,11 +43,8 @@ export async function localTtsGenerate(
   const argv = ["hyperframes", "tts", intent, "--output", outPath];
   if (ctx?.voice) argv.push("--voice", ctx.voice);
   if (ctx?.lang && ctx.lang !== "en") argv.push("--lang", ctx.lang);
-  // On Windows a bare "npx" is npx.cmd, which execFileSync cannot exec
-  // (spawnSync npx ENOENT) — resolveSpawnCommand reroutes it through
-  // node + npx-cli.js, same as the audio engine's TTS spawns.
   const resolved = resolveSpawnCommand(
-    "npx",
+    "bunx",
     argv,
     { encoding: "utf8", timeout: 300000, stdio: ["ignore", "pipe", "pipe"] },
     platform,
@@ -55,11 +52,8 @@ export async function localTtsGenerate(
     pathExists,
   );
   if (!resolved) {
-    // npx-on-win32 with no resolvable npx-cli.js — same terminal condition
-    // spawnP warns about. Fall through to the next provider rather than crash.
     console.error(
-      "media-use: local voice not enabled (kokoro). Cannot run npx on Windows: " +
-        "npm's npx-cli.js was not found (install npm with Node, or run via npx/npm run so npm_execpath is set).",
+      "media-use: local voice not enabled (kokoro). Cannot run bunx on Windows.",
     );
     return null;
   }

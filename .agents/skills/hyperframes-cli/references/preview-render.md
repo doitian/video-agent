@@ -5,12 +5,12 @@ Serve, render, and share commands.
 ## preview
 
 ```bash
-npx hyperframes preview                   # foreground on a TTY; persistent in agent shells
-npx hyperframes preview --background      # explicit persistent session
-npx hyperframes preview --foreground --json # ready JSON, then remain attached
-npx hyperframes preview --background --port 4567 # agent-safe custom port (default 3002)
-npx hyperframes preview --selection --json # print the current Studio selection and exit
-npx hyperframes preview --context --json  # print compact agent context from Studio
+bunx hyperframes preview                   # foreground on a TTY; persistent in agent shells
+bunx hyperframes preview --background      # explicit persistent session
+bunx hyperframes preview --foreground --json # ready JSON, then remain attached
+bunx hyperframes preview --background --port 4567 # agent-safe custom port (default 3002)
+bunx hyperframes preview --selection --json # print the current Studio selection and exit
+bunx hyperframes preview --context --json  # print compact agent context from Studio
 ```
 
 Hot-reloads on file changes. Opens Studio in the browser automatically — the full timeline editor, where the user can play the video and edit anything by hand before rendering. This is the review surface, not just a viewer.
@@ -21,11 +21,11 @@ When handing a project back to the user, use the Studio project URL, not the sou
 http://localhost:<port>/#project/<project-name>
 ```
 
-Use the actual port and project directory name; treat `index.html` as source-code context, not the preview surface. For example, after `npx hyperframes preview --background --port 3017` in `codex-openai-video`, report `http://localhost:3017/#project/codex-openai-video`.
+Use the actual port and project directory name; treat `index.html` as source-code context, not the preview surface. For example, after `bunx hyperframes preview --background --port 3017` in `codex-openai-video`, report `http://localhost:3017/#project/codex-openai-video`.
 
 To land the user on the **Storyboard view** instead of the timeline, put `?view=storyboard` ahead of the hash: `http://localhost:<port>/?view=storyboard#project/<project-name>`. Hand this URL whenever the storyboard is the thing to review and nothing is assembled yet — before `index.html` exists, the timeline stage has nothing to show, so the bare project URL opens on an empty player.
 
-Two ways a handed URL turns out dead — check both before handing it back: the URL is missing its `#project/<project-name>` hash (Studio loads but has no project to open), or the server is not actually running. Bare `preview` automatically creates a managed persistent session in a non-TTY agent shell; `--background` remains the clearest explicit form. Verify the printed URL returns HTTP 200, keep it alive for the whole review, and stop it explicitly with `npx hyperframes preview --stop` afterward. Use the printed URL as-is: HyperFrames URL-encodes project names that contain route metacharacters.
+Two ways a handed URL turns out dead — check both before handing it back: the URL is missing its `#project/<project-name>` hash (Studio loads but has no project to open), or the server is not actually running. Bare `preview` automatically creates a managed persistent session in a non-TTY agent shell; `--background` remains the clearest explicit form. Verify the printed URL returns HTTP 200, keep it alive for the whole review, and stop it explicitly with `bunx hyperframes preview --stop` afterward. Use the printed URL as-is: HyperFrames URL-encodes project names that contain route metacharacters.
 
 ### Agent context from Studio selection
 
@@ -34,7 +34,7 @@ Two ways a handed URL turns out dead — check both before handing it back: the 
 Use it when the user gives deictic edit instructions like "change this", "move the selected element", "make the card I clicked bigger", or "fix the current selection":
 
 ```bash
-npx hyperframes preview --context --json --context-fields selection
+bunx hyperframes preview --context --json --context-fields selection
 ```
 
 The compact context payload includes the selected element's source file, composition path, current timeline time, `data-hf-id` / selector target, bounding box, text content, and a thumbnail URL for the selected element. Prefer `selection.target.hfId` when present; fall back to `selection.target.selector` only when no stable `data-hf-id` exists. If `selection` is `null`, inspect `errors.selection.code` (for example, `no-selection`).
@@ -42,15 +42,15 @@ The compact context payload includes the selected element's source file, composi
 Keep agent context small by asking only for the slices you need:
 
 ```bash
-npx hyperframes preview --context --json --context-fields selection
-npx hyperframes preview --context --json --context-fields lint
-npx hyperframes preview --context --json --context-fields selection,lint
+bunx hyperframes preview --context --json --context-fields selection
+bunx hyperframes preview --context --json --context-fields lint
+bunx hyperframes preview --context --json --context-fields selection,lint
 ```
 
 Use `--context-detail full` only when the edit genuinely needs heavy selection fields such as `computedStyles`, `inlineStyles`, `dataAttributes`, or editable text-field metadata:
 
 ```bash
-npx hyperframes preview --context --json --context-fields selection --context-detail full
+bunx hyperframes preview --context --json --context-fields selection --context-detail full
 ```
 
 `preview --selection --json` remains available when you explicitly want the full selected-element payload and do not need lint/server context.
@@ -59,7 +59,7 @@ Failure modes:
 
 | Code                       | Meaning                                                                    |
 | -------------------------- | -------------------------------------------------------------------------- |
-| `preview-not-running`      | Start Studio first with `npx hyperframes preview --background`.            |
+| `preview-not-running`      | Start Studio first with `bunx hyperframes preview --background`.            |
 | `ambiguous-preview-server` | Multiple matching Studio servers are open; rerun with one listed `--port`. |
 | `preview-port-mismatch`    | The requested `--port` is not one of the matching Studio servers.          |
 | `no-selection`             | Studio is open, but the user has not selected an element yet.              |
@@ -70,9 +70,9 @@ If there is no selection, ask the user to click the target element in Studio and
 ## play (lightweight player)
 
 ```bash
-npx hyperframes play                  # current project, port 3003
-npx hyperframes play ./my-video       # specific project
-npx hyperframes play --port 8080      # custom port
+bunx hyperframes play                  # current project, port 3003
+bunx hyperframes play ./my-video       # specific project
+bunx hyperframes play --port 8080      # custom port
 ```
 
 `play` serves the composition through the embeddable `<hyperframes-player>` web component instead of the full Studio UI. Use it when sharing a preview link or when Studio is heavier than needed (no editor, no panels). `play` reports the plain `http://localhost:<port>` URL — no `#project/<name>` fragment (that's a Studio routing convention only `preview` uses).
@@ -91,10 +91,10 @@ Both `preview` and `play` can open inside an explicit Chromium-compatible browse
 
 ```bash
 # Open preview in an isolated Chromium profile
-npx hyperframes preview --background --browser-path /usr/bin/chromium --user-data-dir /tmp/hf-profile
+bunx hyperframes preview --background --browser-path /usr/bin/chromium --user-data-dir /tmp/hf-profile
 
 # Same plus a CDP endpoint on :9222 (attach DevTools / Playwright / etc.)
-npx hyperframes play --browser-path /usr/bin/chromium --user-data-dir /tmp/hf-profile --remote-debugging-port 9222
+bunx hyperframes play --browser-path /usr/bin/chromium --user-data-dir /tmp/hf-profile --remote-debugging-port 9222
 ```
 
 Validation runs before any server boots, so an invalid value exits cleanly without leaving a listening socket behind.
@@ -104,14 +104,14 @@ Validation runs before any server boots, so an invalid value exits cleanly witho
 > Render only after the user has reviewed in `preview` and approved. Don't auto-render when the checks pass.
 
 ```bash
-npx hyperframes render                                # standard MP4 from cwd
-npx hyperframes render ./my-video --output ./out.mp4  # render from outside the project dir
-npx hyperframes render --output final.mp4             # named output (no timestamp)
-npx hyperframes render -c compositions/intro.html -o intro.mp4  # render a specific sub-composition file
-npx hyperframes render --quality draft                # fast iteration
-npx hyperframes render --fps 60 --quality high        # final delivery
-npx hyperframes render --format webm                  # transparent WebM
-npx hyperframes render --docker                       # byte-identical
+bunx hyperframes render                                # standard MP4 from cwd
+bunx hyperframes render ./my-video --output ./out.mp4  # render from outside the project dir
+bunx hyperframes render --output final.mp4             # named output (no timestamp)
+bunx hyperframes render -c compositions/intro.html -o intro.mp4  # render a specific sub-composition file
+bunx hyperframes render --quality draft                # fast iteration
+bunx hyperframes render --fps 60 --quality high        # final delivery
+bunx hyperframes render --format webm                  # transparent WebM
+bunx hyperframes render --docker                       # byte-identical
 ```
 
 > Default `--output` is `renders/<project-name>_<YYYY-MM-DD>_<HH-MM-SS>.<ext>` — timestamped per render so successive runs don't clobber each other. Pass `--output` to get a stable name.
@@ -151,14 +151,14 @@ npx hyperframes render --docker                       # byte-identical
 After a render is verified, send one feedback line per task. This is the maintainers' primary signal — a render that finishes silently tells them nothing.
 
 ```bash
-npx hyperframes feedback --rating 10                              # clean run, no notes
-npx hyperframes feedback --rating 6 --comment "bg <video> renders grey in multi-scene; worked around with --format png-sequence"
+bunx hyperframes feedback --rating 10                              # clean run, no notes
+bunx hyperframes feedback --rating 6 --comment "bg <video> renders grey in multi-scene; worked around with --format png-sequence"
 ```
 
 `--rating` is an integer from 0-10 (required); `--comment` is free text. Feedback is anonymous and attaches a `doctorSummary` (OS/Node/CPU/mem/ffmpeg) automatically, so don't repeat those fields. A clean run needs only a short result. Before sending any bug, workaround, or confusing behavior, collect this compact reproduction packet:
 
 ```text
-REPRO COMMAND: <HF_*/PRODUCER_* env> npx hyperframes <exact command>   # run from the project directory; do NOT paste absolute paths
+REPRO COMMAND: <HF_*/PRODUCER_* env> bunx hyperframes <exact command>   # run from the project directory; do NOT paste absolute paths
 EXPECTED / ACTUAL: <expected behavior> / <observed behavior and isolated trigger>
 EXACT ERROR: <verbatim error or warning; include frame/timestamp for visual defects>
 OUTCOME: <output correct | output corrupt | fallback succeeded | hard exit | command hung>
@@ -182,10 +182,10 @@ Hit a reproducible bug? Add `--file-issue` (optionally `--dir <project>` and `--
 ## publish
 
 ```bash
-npx hyperframes publish              # upload current project privately, return stable URL
-npx hyperframes publish ./my-video   # specific project
-npx hyperframes publish --public     # allow anyone with the URL to view the claimed project
-npx hyperframes publish --yes        # skip the confirmation prompt (scripts/CI)
+bunx hyperframes publish              # upload current project privately, return stable URL
+bunx hyperframes publish ./my-video   # specific project
+bunx hyperframes publish --public     # allow anyone with the URL to view the claimed project
+bunx hyperframes publish --yes        # skip the confirmation prompt (scripts/CI)
 ```
 
 Uploads the project's source (HTML + assets) and returns a stable hosted URL that renders in the browser. A fresh publish is private by default and requires authentication plus access to view. Use `--public` to allow anyone with the URL to view the claimed project. Updating a project in place keeps its existing visibility: re-publishing without `--public` never turns a public project private. `--yes` only skips the confirmation prompt; it does not change visibility. A signed-out publish returns an authentication-required claim URL rather than a public playback URL. Lint findings are surfaced before upload but do not block.

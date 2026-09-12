@@ -10,7 +10,7 @@ When a beat needs a deterministic text animation, load the upstream skill alongs
 
 ```bash
 # In your project root, install the upstream skill into .agents/skills/
-npx skills add pixel-point/animate-text
+bunx skills add pixel-point/animate-text
 ```
 
 Or in a skill-aware agent runtime, the skill is invoked by name:
