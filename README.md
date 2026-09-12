@@ -6,8 +6,9 @@ A workspace for an AI agent to cut and edit videos from natural-language instruc
 
 - [Hyperframes](https://github.com/heygen-com/hyperframes): HTML-based video compositions, animation, and rendering. The entry-point skill installs additional workflows as needed.
 - [FFmpeg skill](https://github.com/kajisho5/ffmpeg-skill): local cutting, joining, reframing, audio editing, and export verification.
+- [hf2capcut](.agents/skills/hf2capcut/SKILL.md): project-local guidance for converting Hyperframes compositions into editable 剪映专业版 or CapCut drafts using `bunx`.
 
-Both are installed in `.agents/skills/` for Codex. `skills-lock.json` records their sources and content hashes.
+Skills are installed in `.agents/skills/` for Codex. `skills-lock.json` records the two upstream skills' sources and content hashes; hf2capcut is maintained in this repository.
 
 ## Setup
 

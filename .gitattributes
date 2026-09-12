@@ -1,3 +1,4 @@
 * text=auto eol=lf
-.agents/skills/** -whitespace
+.agents/skills/ffmpeg-skill/** -whitespace
+.agents/skills/hyperframes/** -whitespace
 .agents/skills/ffmpeg-skill/.claude/skills/concurrent-branches/SKILL.md conflict-marker-size=32
