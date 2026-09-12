@@ -31,6 +31,12 @@ bunx ffmpeg-skill --dir .agents/skills
 
 This installs all 20 published Hyperframes skills into `.agents/skills/` as real files (`--copy`, not symlinks). It resolves the skills.sh registry blob, which can lag upstream `main` by hours; the docs' freshness command (`npx hyperframes skills update`) writes user-level skills for every detected agent, so it is not used here.
 
+To delete those global copies (Claude, Gemini, Codex, and other agent skill dirs) without touching this repo:
+
+```powershell
+./scripts/cleanup-global-skills.ps1
+```
+
 Check local editing capabilities:
 
 ```powershell
