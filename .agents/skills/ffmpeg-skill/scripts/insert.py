@@ -27,7 +27,7 @@ import argparse
 import math
 import sys
 
-from _common import add_common, apply_common, default_output, die, emit, ffmpeg_base, info, parse_time, probe, run, video_args, X264_PRESETS
+from _common import add_common, apply_common, default_output, die, emit, ffmpeg_base, info, parse_time, probe, run, video_args, X264_PRESETS, time_arg, fmt_secs
 
 
 def even(n: float) -> int:
@@ -52,7 +52,7 @@ def main() -> int:
     args = ap.parse_args()
     apply_common(args)
 
-    target = parse_time(args.duration)
+    target = time_arg(args.duration, "--duration", args.fps)
     if target <= 0:
         die("--duration must be > 0")
     if args.fps <= 0:
@@ -119,7 +119,7 @@ def main() -> int:
 
     result = probe(output, role="output")
     v = result["video"]
-    info(f"wrote {output} ({result['duration']:.3f}s, {v['width']}x{v['height']}, {v['fps']:g}fps)")
+    info(f"wrote {output} ({fmt_secs(result['duration'])}, {v['width']}x{v['height']}, {v['fps']:g}fps)")
     emit(output)
     return 0
 

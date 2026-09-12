@@ -5,7 +5,7 @@ description: 'Edit video and audio with local FFmpeg from natural-language reque
 
 # ffmpeg-skill
 
-Scripts live in `scripts/` next to this file; run them with `python3 <skill-dir>/scripts/<name>.py`. Every script has `--help`, and all of them accept `--dry-run`, `--json` (structured result with a probe of the output), `--fast` (preview quality), `--progress`, `--timeout SECONDS` (a single ffmpeg run is killed past this and reported as `kind: timeout`; default 1800) and `--overwrite` (consent to replace an output that already exists; without it the tool warns today and refuses from 2.0). Writing tools run nothing under `--dry-run`; `probe`/`check`/`sync`/`multicam`/`scenes`/`cropdetect`/`report` may still run ffmpeg/ffprobe to measure or analyse — they just don't write their final artifact; `verify` accepts the flag but ignores it. Exact per-tool semantics: `contract --json`'s `dry_run` field (or `docs/contract.md`). Details for every flag: `references/scripts.md`. Device-specific behaviour (iPhone HDR, GoPro, DJI, screen recordings, Zoom): `references/devices.md`.
+Scripts live in `scripts/` next to this file; run them with `python3 <skill-dir>/scripts/<name>.py`. Every script has `--help`, and all of them accept `--dry-run`, `--json` (structured result with a probe of the output), `--fast` (preview quality), `--progress`, `--timeout SECONDS` (a single ffmpeg run is killed past this and reported as `kind: timeout`; default 1800) and `--overwrite` (consent to replace an output that already exists; without it the tool warns today and refuses from 2.0). Writing tools run nothing under `--dry-run`; `probe`/`check`/`sync`/`multicam`/`scenes`/`cropdetect`/`report`/`silence`/`loudness`/`stabilize` may still run ffmpeg/ffprobe to measure or analyse — they just don't write their final artifact (nor side files such as `--edl`, `--sheet` or a generated `.ass`); `verify` accepts the flag but ignores it. Exact per-tool semantics: `contract --json`'s `dry_run` field (or `docs/contract.md`). Details for every flag: `references/scripts.md`. Device-specific behaviour (iPhone HDR, GoPro, DJI, screen recordings, Zoom): `references/devices.md`.
 
 ## Workflow (always follow this order)
 
@@ -265,7 +265,7 @@ Notes: send a valid .cube, or say if you want the clip left as is
 
 A refusal (the request asks for a judgement this skill does not make, or for something outside its scope) uses the same shape: `Failed:` names what was refused and why, `Steps:` lists what did run (usually only probe), `Look: not needed`. Both keep the five labels so a reader can scan a failed report the way they scan a successful one. When a tool's failure JSON carries `error.hint`, quote it in `Notes:` — it is the flag change that would make the retry meaningful.
 
-Every script prints `{"status": "failed", "error": {"kind": input | ffmpeg | output | missing_tool | timeout | verification, "message": ...}}` with `--json` and exits non-zero; quote the message, do not paraphrase it into a success.
+Every script prints `{"status": "failed", "error": {"kind": input | ffmpeg | output | missing_tool | timeout | verification | interrupted, "message": ...}}` with `--json` and exits non-zero; quote the message, do not paraphrase it into a success.
 
 ## Things that look right but are wrong
 

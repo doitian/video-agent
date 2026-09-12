@@ -21,7 +21,7 @@ The contract is derived from the code that runs, not maintained beside it:
 | Field | Meaning | Changes when |
 |---|---|---|
 | `contract_version` | shape of this document (`1.0`) | a key is renamed, removed or changes meaning |
-| `skill.version` | the npm / package.json version (`1.4.8`) | any release |
+| `skill.version` | the npm / package.json version (`1.4.12`) | any release |
 
 A release that adds a tool or a flag keeps `contract_version`; a breaking change to the
 ToolSpec shape bumps it. Consumers pin on `contract_version` and read `skill.version`
@@ -83,7 +83,7 @@ on, the line says so.
 ```json
 {
   "contract_version": "1.0",
-  "skill": {"id": "ffmpeg-skill", "version": "1.4.8", "execution_mode": "local", "kind": "execution",
+  "skill": {"id": "ffmpeg-skill", "version": "1.4.12", "execution_mode": "local", "kind": "execution",
             "entrypoints": {"cli": "...", "mcp": "...", "contract": "...", "doctor": "..."},
             "not_provided": ["AI reasoning", "decisions", "production plans", "project IR", "approvals", "network access", "transcription engine"]},
   "requirements": {"python": ">=3.9 (standard library only)", "ffmpeg": ">=5.0", "ffprobe": ">=5.0"},
@@ -156,9 +156,10 @@ with `--dry-run` behind a fake `ffmpeg` that records any call, and asserts that 
 call happened and no file appeared. Under `--dry-run` a tool prints the command lines
 it would run, reports `dry_run: true`, and never reports an output probe. The
 exceptions are stated per tool in the contract's `dry_run` field: `probe` and `check` are
-read-only (ffprobe still runs), `sync`, `multicam`, `scenes`, `cropdetect` and `report` still
-run their ffmpeg/ffprobe measurements (the analysis is the tool's job; only the artifact is
-skipped), and `verify` does not support dry-run (its steps run). `SKILL.md` and
+read-only (ffprobe still runs); `sync`, `multicam`, `scenes`, `cropdetect`, `report`, `silence`,
+`loudness` and `stabilize` still run their ffmpeg/ffprobe measurements (the analysis is the
+tool's job; only the artifact is skipped, including side files such as `--edl`, `--sheet` or a
+generated `.ass`), and `verify` does not support dry-run (its steps run). `SKILL.md` and
 `references/scripts.md` repeat the same list; the contract is the authority.
 
 ### Repeatability
@@ -308,7 +309,7 @@ before, and, when `--json` was given, on stdout:
 
 ```json
 {"status": "failed", "exit_code": 1,
- "error": {"kind": "input | ffmpeg | output | missing_tool | timeout | verification", "message": "...",
+ "error": {"kind": "input | ffmpeg | output | missing_tool | timeout | verification | interrupted", "message": "...",
            "code": "INPUT_INVALID | DEPENDENCY_MISSING | FFMPEG_EXECUTION_FAILED | OUTPUT_INVALID | TIMEOUT | VERIFICATION_FAILED | INTERNAL_ERROR",
            "retryable": false},
  "commands": ["ffmpeg ..."]}

@@ -43,12 +43,11 @@ INSTALL_HINTS = {
 }
 
 
-# `kind` (below) has been the only machine-readable failure axis since 0.1: a flat, 4-value
-# vocabulary (input / missing_tool / ffmpeg / output) set at the ~7 call sites that ever pass one
-# explicitly, defaulting to "input" everywhere else. `ERROR_CODE` is an additive, purely
-# informational refinement layered on top for agents that want a stable enum to switch on instead
-# of pattern-matching `kind` strings -- it is a static 1:1 relabelling of the exact same 4 buckets,
-# not a new taxonomy. It intentionally does NOT introduce categories this codebase cannot actually
+# `kind` (below) is the machine-readable failure axis: input / missing_tool / ffmpeg / output
+# since 0.1, plus timeout (1.3), verification (1.4.3) and interrupted (1.4.10). `ERROR_CODE` is an
+# additive, purely informational refinement layered on top for agents that want a stable enum to
+# switch on instead of pattern-matching `kind` strings -- a static 1:1 relabelling of the same
+# buckets, not a new taxonomy. It intentionally does NOT introduce categories this codebase cannot actually
 # distinguish today (e.g. a separate ffprobe-vs-ffmpeg code, or an environment-vs-content-cause
 # split of ffmpeg failures): every ffmpeg subprocess failure is currently one undifferentiated
 # bucket regardless of whether ffmpeg rejected a bad filter argument or died from a full disk,
@@ -64,6 +63,7 @@ ERROR_CODE = {
     "output": "OUTPUT_INVALID",
     "timeout": "TIMEOUT",
     "verification": "VERIFICATION_FAILED",
+    "interrupted": "INTERRUPTED",
 }
 
 # Wall-clock ceiling for one ffmpeg/ffprobe invocation, in seconds. A hung ffmpeg (a build
@@ -112,6 +112,17 @@ def ffmpeg_version() -> "Tuple[int, int]":
             m = re.search(r"ffprobe version\s+n?(\d+)\.(\d+)", out)
             if m:
                 _FFMPEG_VERSION = (int(m.group(1)), int(m.group(2)))
+            else:
+                # git / vendor builds print "N-115000-g..." or a date, never major.minor; the
+                # libavutil major is still there and maps one-to-one onto the FFmpeg major
+                # (56=4, 57=5, 58=6, 59=7, 60=8). Without this every version branch took the
+                # oldest spelling on such builds: on 7.1 that skipped bt709_tag_args()'s
+                # workaround and an untagged source got a real matrix conversion.
+                m = re.search(r"^libavutil\s+(\d+)\.", out, re.M)
+                if m:
+                    major = int(m.group(1)) - 52
+                    if major >= 4:
+                        _FFMPEG_VERSION = (major, 0)
         except (OSError, subprocess.TimeoutExpired):
             # (0, 0) = unknown: every version branch then takes the older, universally accepted
             # spelling, the same "unknown is not missing" stance doctor takes.
@@ -138,7 +149,9 @@ def pad_filters(out_w: int, out_h: int, fill: str, color: str, blur: int) -> str
     then boxblur'ed, the other scaled to fit, overlaid centred. Only `filter:boxblur` is
     needed beyond the usual scale/pad set, and that is already required by redact.py."""
     if fill == "blur":
-        radius = max(1, int(blur))
+        # boxblur rejects a radius larger than half the smaller dimension ("radius 20, must be
+        # <= 8" on a 16 px target); clamp instead of failing an otherwise valid request
+        radius = max(1, min(int(blur), max(1, min(out_w, out_h) // 2 - 1)))
         return (f"split[__fitfg][__fitbg];"
                 f"[__fitbg]scale={out_w}:{out_h}:force_original_aspect_ratio=increase,crop={out_w}:{out_h},"
                 f"boxblur={radius}:2[__fitbgb];"
@@ -263,6 +276,66 @@ def apply_common(args: "argparse.Namespace") -> None:
     crf = getattr(args, "crf", None)
     if crf is not None and not 0 <= int(crf) <= 51:
         die(f"--crf must be between 0 and 51 (x264/x265 scale; 18 is visually lossless, 23 the encoder default), got {crf}")
+    install_signal_handlers()
+
+
+# The child processes this tool is waiting on right now (an ffmpeg, or a sibling script under
+# run_tool), with the command whose partial output would need removing. A signal handler
+# reads it; the runners keep it current. Before 1.4.9 a SIGTERM to the tool (a cancelled MCP
+# call, a supervisor's stop, a closed terminal) killed only the Python parent: ffmpeg carried on
+# as an orphan, finished a file nobody verified, and the caller got no JSON at all; SIGINT was a
+# KeyboardInterrupt traceback with the partial left on disk.
+_CHILDREN: List[Tuple[subprocess.Popen, Sequence[str]]] = []
+_SIGNALS_INSTALLED = False
+
+
+def _on_signal(signum: int, frame: Any) -> None:
+    import signal as _signal
+    name = {getattr(_signal, "SIGINT", None): "SIGINT", getattr(_signal, "SIGTERM", None): "SIGTERM"}.get(signum, str(signum))
+    for proc, cmd in list(_CHILDREN):
+        try:
+            proc.terminate()  # ffmpeg exits promptly on SIGTERM; a sibling script runs this same handler
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+        except OSError:
+            pass
+        if cmd:
+            _cleanup_partial_output(cmd)
+    _CHILDREN.clear()
+    die(f"interrupted by {name}: the running command was stopped and its partial output removed; nothing was written",
+        code=128 + signum, kind="interrupted")
+
+
+def install_signal_handlers() -> None:
+    """SIGINT/SIGTERM stop the child, remove its partial output and exit with a failure document
+    (kind: interrupted, exit 130/143). Main thread only; on Windows SIGTERM is never delivered,
+    SIGINT (Ctrl-C) is."""
+    global _SIGNALS_INSTALLED
+    if _SIGNALS_INSTALLED:
+        return
+    import signal as _signal
+    import threading
+    if threading.current_thread() is not threading.main_thread():
+        return
+    for sig in (getattr(_signal, "SIGINT", None), getattr(_signal, "SIGTERM", None)):
+        if sig is None:
+            continue
+        try:
+            _signal.signal(sig, _on_signal)
+        except (ValueError, OSError):
+            pass
+    _SIGNALS_INSTALLED = True
+
+
+def _watch(proc: subprocess.Popen, cmd: Sequence[str]) -> None:
+    _CHILDREN.append((proc, cmd))
+
+
+def _unwatch(proc: subprocess.Popen) -> None:
+    _CHILDREN[:] = [(p, c) for p, c in _CHILDREN if p is not proc]
 
 
 def emit(output: Optional[str], **extra: Any) -> None:
@@ -356,6 +429,40 @@ def _check_no_overwrite_input(cmd: Sequence[str]) -> None:
                 continue
 
 
+def refuse_output_is_input(output: str, *inputs: str) -> None:
+    """Tool-level twin of the run() guard, for tools whose final ffmpeg command does not name
+    the user's input at all. `cut.py --segments` cuts each part into a temp dir and then concats
+    a list file: the last command's only `-i` is that list, so `-o` equal to the input sailed
+    through _check_no_overwrite_input() and replaced the source with the join (fourth audit,
+    P0). Call it once the output path is known, before any part of the input is consumed."""
+    try:
+        out_real = os.path.realpath(output)
+    except OSError:
+        return
+    for inp in inputs:
+        try:
+            same = os.path.realpath(inp) == out_real
+        except OSError:
+            continue
+        if same:
+            die(f"refusing to run: output {output!r} is the same file as input {inp!r} "
+                f"(the result would replace the source) -- choose a different --output/-o path", kind="input")
+
+
+def _check_output_path(cmd: Sequence[str]) -> None:
+    """An output whose directory does not exist, or that names a directory, is a caller mistake:
+    say so as `kind: input` before ffmpeg runs, instead of the muxer's "No such file or directory"
+    as `kind: ffmpeg` (which reads as an encoder failure) or an `OUTPUT_INVALID` after the fact."""
+    output = cmd[-1]
+    if output == "-" or output.startswith("pipe:") or output.startswith("-"):
+        return
+    if os.path.isdir(output):
+        die(f"output {output!r} is a directory; pass a file path (e.g. {os.path.join(output, 'result.mp4')!r})")
+    parent = os.path.dirname(os.path.abspath(output))
+    if not os.path.isdir(parent):
+        die(f"output directory {parent!r} does not exist; create it first (this tool never creates directories)")
+
+
 def _check_existing_output(cmd: Sequence[str]) -> None:
     """An output path that already exists is someone's file: a previous result, a source the
     agent mis-named, a deliverable from another run. ffmpeg's -y (which every command carries so
@@ -441,6 +548,7 @@ def run(cmd: Sequence[str], *, quiet: bool = False, check: bool = True) -> subpr
     is_ffmpeg = _is_ffmpeg(cmd)
     if is_ffmpeg:
         _check_no_overwrite_input(cmd)
+        _check_output_path(cmd)
         _check_existing_output(cmd)
         STATE.commands.append(_cmdline(cmd))
     if not quiet:
@@ -514,9 +622,16 @@ def run_tool(argv: Sequence[str], *, per_call: Optional[float] = None) -> subpro
     document (kind timeout, exit 124), so callers that parse the child's --json see a timeout
     exactly as they would from the child itself."""
     limit = child_limit(per_call)
+    child = subprocess.Popen([sys.executable] + list(argv), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    _watch(child, [])  # a sibling script removes its own partial output; there is none of ours to clean
     try:
-        return subprocess.run([sys.executable] + list(argv), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=limit)
+        out, err = child.communicate(timeout=limit)
+        _unwatch(child)
+        return subprocess.CompletedProcess(child.args, child.returncode, out, err)
     except subprocess.TimeoutExpired as e:
+        child.kill()
+        child.communicate()
+        _unwatch(child)
         name = os.path.basename(str(argv[0]))
         msg = f"{name} did not finish within {limit:.0f} s (4x the per-ffmpeg --timeout plus 60 s) and was killed"
         doc = {"status": "failed", "exit_code": 124,
@@ -608,10 +723,18 @@ def _limit_for(cmd: Sequence[str]) -> Optional[float]:
 def _run_captured(cmd: List[str], check: bool) -> subprocess.CompletedProcess:
     """Plain run with stdout/stderr captured."""
     limit = _limit_for(cmd)
+    child = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    _watch(child, cmd)
     try:
-        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=limit)
+        out, err = child.communicate(timeout=limit)
     except subprocess.TimeoutExpired:
+        child.kill()
+        child.communicate()
+        _unwatch(child)
         _timed_out(cmd, limit or 0)
+    finally:
+        _unwatch(child)
+    proc = subprocess.CompletedProcess(list(cmd), child.returncode, out, err)
     if proc.returncode == 0 and _is_ffmpeg(cmd):
         _remember_output(cmd)
     if proc.returncode != 0:
@@ -651,6 +774,7 @@ def _run_with_progress(cmd: List[str], check: bool) -> subprocess.CompletedProce
     t0 = time.time()
     limit = _limit_for(cmd)
     proc = subprocess.Popen(full, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    _watch(proc, cmd)
     assert proc.stdout is not None and proc.stderr is not None
     lines: "queue.Queue[Optional[str]]" = queue.Queue()
     err_chunks: List[str] = []
@@ -702,6 +826,7 @@ def _run_with_progress(cmd: List[str], check: bool) -> subprocess.CompletedProce
         proc.wait(timeout=(max(5.0, limit - (time.time() - t0)) if limit else None))
     except subprocess.TimeoutExpired:
         timed_out()
+    _unwatch(proc)
     err_thread.join()
     err = "".join(err_chunks)
     clear_line()
@@ -726,7 +851,8 @@ def ffmpeg_base(overwrite: bool = True) -> List[str]:
     return cmd
 
 
-MEDIA_EXT = {".mp4", ".mov", ".mkv", ".webm", ".m4v", ".avi", ".ts", ".mts", ".gif", ".wav", ".flac", ".mp3", ".m4a", ".aac", ".ogg", ".opus", ".png", ".jpg", ".jpeg"}
+MEDIA_EXT = {".mp4", ".mov", ".mkv", ".webm", ".m4v", ".avi", ".ts", ".mts", ".m2ts", ".mxf", ".3gp", ".wmv", ".gif",
+             ".wav", ".flac", ".mp3", ".m4a", ".aac", ".ogg", ".opus", ".aif", ".aiff", ".caf", ".wma", ".png", ".jpg", ".jpeg", ".webp"}
 
 
 def _output_failed(path: str, why: str) -> "None":
@@ -789,7 +915,12 @@ def probe(path: str, role: str = "input") -> Dict[str, Any]:
         if role == "output":
             _output_failed(path, f"ffprobe cannot read it:\n{proc.stderr.strip()}")
         die(f"ffprobe failed on {path}:\n{proc.stderr.strip()}")
-    raw = json.loads(proc.stdout or "{}")
+    try:
+        raw = json.loads(proc.stdout or "{}")
+    except ValueError as e:
+        if role == "output":
+            _output_failed(path, f"ffprobe printed unreadable JSON: {e}")
+        die(f"ffprobe printed unreadable JSON for {path}: {e}", kind="ffmpeg")
     fmt = raw.get("format", {})
     streams = raw.get("streams", [])
     video = next((s for s in streams if s.get("codec_type") == "video" and s.get("disposition", {}).get("attached_pic", 0) == 0), None)
@@ -868,7 +999,7 @@ def probe(path: str, role: str = "input") -> Dict[str, Any]:
             "avg_frame_rate": video.get("avg_frame_rate"),
             "variable_frame_rate_suspected": vfr,
             "pix_fmt": video.get("pix_fmt"),
-            "bit_depth": 10 if "10" in pix else (12 if "12" in pix else 8),
+            "bit_depth": _bit_depth(pix),
             "hdr": hdr,
             "hdr_format": (("Dolby Vision %s" % (("profile %s" % dovi["profile"]) if dovi and dovi.get("profile") is not None else "")).strip() if dovi else
                            "HDR10/PQ" if trc == "smpte2084" else "HLG" if trc == "arib-std-b67" else "BT.2020 SDR" if hdr else None),
@@ -924,6 +1055,53 @@ def concat_list_line(path: str) -> str:
     return f"file '{escaped}'"
 
 
+def _bit_depth(pix_fmt: Optional[str]) -> int:
+    """Bits per component from a pixel format name. `"10" in pix` used to read yuv410p (4:1:0
+    chroma) as 10-bit; the depth is the number that ends the name (before an le/be suffix):
+    yuv420p10le -> 10, gbrp12be -> 12, gray16le -> 16, yuv410p / yuv420p / rgb24 -> 8."""
+    m = re.search(r"(\d{1,2})(?:le|be)?$", pix_fmt or "")
+    if not m:
+        return 8
+    n = int(m.group(1))
+    if n in (24, 32):      # packed 8-bit rgb24/bgr32/rgb0 etc.
+        return 8
+    if n in (48, 64):      # packed 16-bit rgb48/rgba64
+        return 16
+    return n if 8 <= n <= 16 else 8
+
+
+def fmt_secs(value: Optional[float]) -> str:
+    """`12.345s`, or `?s` when the probe had no duration (MPEG-TS without a duration tag, a
+    stream whose container and streams all omit it). Every writing tool prints the duration
+    of what it wrote; formatting None with :.3f used to raise TypeError after a successful
+    encode, in 25+ scripts."""
+    return "?s" if value is None else f"{value:.3f}s"
+
+
+def place_output(src: str, dst: str) -> None:
+    """Deliver an already-rendered file to `dst` under the same rules as an ffmpeg output:
+    the path is checked, an existing file is only replaced through a sibling temp so a
+    failed copy never costs the caller what was there, and the result is remembered as ours.
+    render.py's final `copyfile()` used to bypass all three."""
+    import shutil
+    cmd = ["ffmpeg", dst]
+    _check_output_path(cmd)
+    _check_existing_output(cmd)
+    d, base = os.path.split(dst)
+    stem, ext = os.path.splitext(base)
+    tmp = os.path.join(d, f".{stem}.ffskill-{os.getpid()}{ext}")
+    try:
+        shutil.copyfile(src, tmp)
+        os.replace(tmp, dst)
+    except OSError as e:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        die(f"could not place {dst}: {e}", kind="output")
+    _remember_output(cmd)
+
+
 def parse_time(value: str, fps: Optional[float] = None) -> float:
     """Accept seconds ('12.5'), mm:ss ('1:30'), hh:mm:ss(.ms) ('00:01:30.250'), SRT '00:01:30,250',
     or -- when `fps` is given -- SMPTE non-drop-frame timecode 'hh:mm:ss:ff' ('00:01:30:15')."""
@@ -952,6 +1130,19 @@ def parse_time(value: str, fps: Optional[float] = None) -> float:
     for part in parts:
         total = total * 60 + float(part)
     return total
+
+
+def time_arg(value: str, flag: str, fps: Optional[float] = None) -> float:
+    """parse_time() for a command-line flag: SMPTE hh:mm:ss:ff resolves with the input's fps when
+    the caller has one, and every parse failure is a `kind: input` refusal naming the flag (so
+    `--json` callers get a failure document, never a traceback)."""
+    try:
+        return parse_time(value, fps)
+    except MissingFpsError as e:
+        die(f"{flag} {value!r}: {e}")
+    except ValueError as e:
+        die(f"{flag} {value!r}: {e} (use seconds, mm:ss, hh:mm:ss.ms or, with a known fps, hh:mm:ss:ff)")
+    return 0.0  # unreachable
 
 
 def fmt_srt_time(seconds: float) -> str:
@@ -987,12 +1178,17 @@ def escape_filter_path(path: str) -> str:
     written `D\\\\:/x.srt`; with a single backslash the second pass still splits at the colon and
     ffmpeg reads `/x.srt` as the next option (`Unable to parse "original_size" option value`).
     Backslashes are turned into forward slashes first (ffmpeg accepts them on Windows), so a backslash
-    never has to be escaped itself; `'`, `,`, `;`, `[` and `]` are graph-level characters.
+    never has to be escaped itself; `,`, `;`, `[` and `]` are graph-level characters and survive with
+    one backslash. `'` is special: the graph parser also treats a quote as the start of a quoted
+    token, so a single `\\'` is consumed by the first pass and "Ryo's Mac/cues.srt" reaches the
+    filter as "Ryos Mac/cues.srt" (Unable to open ...). Three backslashes survive both passes
+    (measured on 6.1 and 7.1 with subtitles=, ass= and lut3d=file=).
     """
     p = str(Path(path))
     p = p.replace("\\", "/")
     p = p.replace(":", "\\\\:")
-    for ch in ("'", ",", ";", "[", "]"):
+    p = p.replace("'", "\\\\\\'")
+    for ch in (",", ";", "[", "]"):
         p = p.replace(ch, "\\" + ch)
     return p
 
@@ -1337,7 +1533,7 @@ def color_hex(value: str) -> str:
     return v.upper()
 
 
-_COLOR_TOKEN_RE = re.compile(r"^(0[xX][0-9A-Fa-f]{6,8}|#[0-9A-Fa-f]{6,8}|[A-Za-z][A-Za-z0-9]*)(@[0-9.]+)?$")
+_COLOR_TOKEN_RE = re.compile(r"^(0[xX][0-9A-Fa-f]{6,8}|#[0-9A-Fa-f]{6,8}|[A-Za-z][A-Za-z0-9]*)(@(?:0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?$")  # alpha is 0..1; "red@2" used to reach ffmpeg
 
 
 def validate_color(value: str, flag: str = "--color") -> str:
