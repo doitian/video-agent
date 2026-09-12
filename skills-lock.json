@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "ffmpeg-skill": {
+      "source": "kajisho5/ffmpeg-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "1e6ce2ae776d0e74ccaf2289aa9207e9908b4fdcd7b073636373efe0612645c1"
+    },
+    "hyperframes": {
+      "source": "heygen-com/hyperframes",
+      "sourceType": "github",
+      "skillPath": "skills/hyperframes/SKILL.md",
+      "computedHash": "33b38182e17a79539be1e8ea0e6d4fa6dac4489b8641b851da5940ee58895feb"
+    }
+  }
+}
