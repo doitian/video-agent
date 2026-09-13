@@ -1,9 +1,10 @@
 #!/usr/bin/env pwsh
 # Updates the skills bundled in .agents/skills.
 #
-# Hyperframes is managed by the `skills` CLI and tracked in skills-lock.json.
-# ffmpeg-skill ships its own installer, so it is excluded from `bunx skills`
-# and refreshed with `bunx ffmpeg-skill` into the project-local skill directory.
+# Hyperframes and Remotion are managed by the `skills` CLI and tracked in
+# skills-lock.json. ffmpeg-skill ships its own installer, so it is excluded
+# from `bunx skills` and refreshed with `bunx ffmpeg-skill` into the
+# project-local skill directory.
 # After those installs, opencode (default model) rewrites the bundled files:
 # scrub global `hyperframes skills update`, and prefer `bunx` over `npx`.
 [CmdletBinding()]
@@ -15,7 +16,11 @@ Push-Location $root
 try {
     Write-Host 'Updating hyperframes (bunx skills)...'
     bunx skills add heygen-com/hyperframes --skill '*' -a codex --copy -y
-    if ($LASTEXITCODE -ne 0) { throw "bunx skills failed with exit code $LASTEXITCODE" }
+    if ($LASTEXITCODE -ne 0) { throw "bunx skills (hyperframes) failed with exit code $LASTEXITCODE" }
+
+    Write-Host 'Updating remotion-dev/skills (bunx skills)...'
+    bunx skills add remotion-dev/skills --skill '*' -a codex --copy -y
+    if ($LASTEXITCODE -ne 0) { throw "bunx skills (remotion) failed with exit code $LASTEXITCODE" }
 
     Write-Host 'Updating ffmpeg-skill (bunx ffmpeg-skill)...'
     bunx ffmpeg-skill --dir .agents/skills
